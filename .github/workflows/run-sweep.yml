@@ -19,14 +19,14 @@ jobs:
   sweep:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Restore cached MYSTRAN build
         id: cache-mystran
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: mystran-bin
           key: mystran-19.0.0-portable-${{ runner.os }}   # same cache as the tests workflow
@@ -62,7 +62,7 @@ jobs:
         run: panel-sweep --out results --line-load ${{ inputs.line_load }} --pressure ${{ inputs.pressure }}
 
       - name: Upload results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sweep-results
           path: |
