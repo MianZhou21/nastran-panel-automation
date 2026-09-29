@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "panel-automation"
+version = "0.1.0"
+description = "Automated Nastran model generation, solving and post-processing for stiffened aircraft panels"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mian Zhou" }]
+dependencies = [
+    "pyNastran>=1.4,<1.5",  # tested with 1.4.1; 1.5 may change the API
+    "numpy",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+panel-sweep = "panel_automation.sweep:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]  # works with or without "pip install -e ."

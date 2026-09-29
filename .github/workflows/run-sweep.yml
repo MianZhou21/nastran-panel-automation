@@ -1,0 +1,67 @@
+name: run design sweep
+
+# Run the full design sweep on GitHub's servers, no local solver needed.
+# Start it from the Actions tab -> "run design sweep" -> "Run workflow",
+# then download the results (CSV, plots, .bdf and .OP2 files) from the run page.
+on:
+  workflow_dispatch:
+    inputs:
+      line_load:
+        description: "Design compressive line load Nx [N/mm]"
+        default: "100"
+        required: true
+      pressure:
+        description: "Lateral pressure [MPa]"
+        default: "0"
+        required: true
+
+jobs:
+  sweep:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore cached MYSTRAN build
+        id: cache-mystran
+        uses: actions/cache@v4
+        with:
+          path: mystran-bin
+          key: mystran-19.0.0-${{ runner.os }}   # same cache as the tests workflow
+
+      - name: Build MYSTRAN
+        if: steps.cache-mystran.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran g++ ninja-build cmake libopenblas-dev
+          # pinned release, so the solver can't change underneath the tests
+          git clone --depth 1 --branch 19.0.0 https://github.com/MYSTRANsolver/MYSTRAN.git
+          cd MYSTRAN
+          git submodule update --init --depth 1
+          cmake -G Ninja .
+          cmake --build .
+          mkdir -p ../mystran-bin && cp Binaries/mystran ../mystran-bin/
+
+      - name: Install runtime libraries
+        run: sudo apt-get install -y libgfortran5 libopenblas0
+
+      - run: pip install -e .
+
+      - name: Run sweep
+        env:
+          MYSTRAN_EXE: ${{ github.workspace }}/mystran-bin/mystran
+        run: panel-sweep --out results --line-load ${{ inputs.line_load }} --pressure ${{ inputs.pressure }}
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-results
+          path: |
+            results/trade_study.csv
+            results/trade_study.png
+            results/buckling_mode.png
+            results/lightest_design.txt
+            results/runs/**/*.bdf
+            results/runs/**/*.OP2

@@ -1,0 +1,62 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit-tests:
+    # Fast checks that need no solver (deck generation, loads, mass, parsing),
+    # on Windows, macOS and Linux.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - run: pytest -v
+
+  verification-tests:
+    # Builds the open-source MYSTRAN solver, then runs every test including the
+    # comparisons against closed-form plate buckling and load-balance checks.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore cached MYSTRAN build
+        id: cache-mystran
+        uses: actions/cache@v4
+        with:
+          path: mystran-bin
+          key: mystran-19.0.0-${{ runner.os }}
+
+      - name: Build MYSTRAN
+        if: steps.cache-mystran.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran g++ ninja-build cmake libopenblas-dev
+          # pinned release, so the solver can't change underneath the tests
+          git clone --depth 1 --branch 19.0.0 https://github.com/MYSTRANsolver/MYSTRAN.git
+          cd MYSTRAN
+          git submodule update --init --depth 1
+          cmake -G Ninja .
+          cmake --build .
+          mkdir -p ../mystran-bin && cp Binaries/mystran ../mystran-bin/
+
+      - name: Install runtime libraries
+        run: sudo apt-get install -y libgfortran5 libopenblas0
+
+      - run: pip install -e ".[dev]"
+      - name: Run all tests
+        env:
+          MYSTRAN_EXE: ${{ github.workspace }}/mystran-bin/mystran
+        run: pytest -v -rs
