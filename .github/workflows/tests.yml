@@ -37,7 +37,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: mystran-bin
-          key: mystran-19.0.0-${{ runner.os }}
+          key: mystran-19.0.0-portable-${{ runner.os }}
 
       - name: Build MYSTRAN
         if: steps.cache-mystran.outputs.cache-hit != 'true'
@@ -48,7 +48,14 @@ jobs:
           git clone --depth 1 --branch 19.0.0 https://github.com/MYSTRANsolver/MYSTRAN.git
           cd MYSTRAN
           git submodule update --init --depth 1
-          cmake -G Ninja .
+          # METIS/GKlib default to -march=native (tuned to this exact CPU). GitHub
+          # runners have different CPUs and the build is cached, so target generic
+          # x86-64 instead, otherwise the cached solver can crash on another machine.
+          sed -i 's/-march=native/-march=x86-64 -mtune=generic/' \
+            submodules/GKlib/cmake/GKlibSystem.cmake submodules/metis/conf/gkbuild.cmake
+          # GIT_SUBMODULE=OFF: otherwise configure re-runs "git submodule update
+          # --force", which silently undoes the edit above
+          cmake -G Ninja -DGIT_SUBMODULE=OFF .
           cmake --build .
           mkdir -p ../mystran-bin && cp Binaries/mystran ../mystran-bin/
 
