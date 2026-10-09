@@ -72,16 +72,21 @@ peak displacement.
 
 ## Verification
 
-Every modelling change is checked against hand calculations
-(`tests/test_verification.py`):
+Every modelling change is checked against hand calculations. The table shows
+the values the tests themselves compute (`tests/test_verification.py`, plus the
+mass check in `tests/test_model.py`), run with MYSTRAN 19.0.0:
 
-| Check | Expected | Model | Difference |
-|---|---|---|---|
-| Square plate buckling, simply supported, k = 4 | 6.682 MPa | 6.661 MPa | −0.3% |
-| 2:1 plate buckling (two half-waves), k = 4 | 15.035 MPa | 15.035 MPa | 0.0% |
-| Uniform compression: skin and stiffener stress = P / A | 42.105 MPa | 42.105 MPa | < 0.01% |
-| Pressure fully reacted: Σ reactions = p·a·b | 2000 N | 2000 N | < 0.01% |
-| Panel mass vs hand calculation | exact | exact | – |
+| Check (test model) | Expected | Model | Difference | Test tolerance |
+|---|---|---|---|---|
+| Square plate buckling, 400 × 400 × 2 mm, simply supported, k = 4 | 6.682 MPa | 6.661 MPa | −0.3% | 2% |
+| 2:1 plate buckling, 400 × 200 × 1.5 mm (two half-waves), k = 4 | 15.035 MPa | 15.035 MPa | 0.0% | 3% |
+| Uniform compression, 300 × 240 mm panel with 2 stiffeners: skin and stiffener stress = P / A, no bending | 41.379 MPa | 41.379 MPa | < 0.01% | 0.1% |
+| Pressure fully reacted, same panel at 0.01 MPa: Σ reactions = p·a·b | 720 N | 720 N | < 0.01% | 0.01% |
+| Panel mass vs hand calculation, same panel | 0.4837 kg | 0.4837 kg | exact | 10⁻⁹ |
+
+The test models are deliberately small and coarse, so the whole suite runs in
+about ten seconds on every push. The design sweep and the mesh study use the full
+500 × 400 mm panel.
 
 Mesh convergence for the lightest design (buckling load factor):
 
